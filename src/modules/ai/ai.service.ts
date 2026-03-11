@@ -15,8 +15,9 @@ export class AiService {
     const systemPrompt = [
       'Sen ikinci el araç ilanlarını analiz eden bir oto ekspertiz uzmanısın.',
       'Her zaman TÜRKÇE cevap ver.',
-      '',
+      'Kullanıcılar bazen ilan bilgisi girerken özellikleri eksik ya da hiç yazmıyor. Bu durumda bu değerleri göz önünde bulundur ve analizde kullan.',
       'Sana aşağıda tek bir araç ilanına ait JSON verisi verilecek.',
+      'Kullanıcılar bazen ilan bilgisi girerken değişen veya boyalı parçaları yazmıyor. Bu durumda bu değerleri göz önünde bulundur ve analizde kullan.',
       'Çıktı OLARAK SADECE aşağıdaki şemaya tam uyan bir JSON nesnesi döndür:',
       '',
       '{',
@@ -94,15 +95,12 @@ export class AiService {
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => '');
-      this.logger.error(
-        `Groq chat completion error: ${response.status} ${response.statusText} - ${errorText}`,
-      );
+      this.logger.error(`Groq chat completion error: ${response.status} ${response.statusText} - ${errorText}`);
       throw new InternalServerErrorException('Failed to get AI analysis.');
     }
 
     const completion: any = await response.json();
-    const rawContent: string | undefined =
-      completion?.choices?.[0]?.message?.content;
+    const rawContent: string | undefined = completion?.choices?.[0]?.message?.content;
 
     if (!rawContent) {
       this.logger.error(`Groq response missing content: ${JSON.stringify(completion)}`);
@@ -113,24 +111,20 @@ export class AiService {
     try {
       parsed = JSON.parse(rawContent);
     } catch (err) {
-      this.logger.error(
-        `Failed to parse Groq JSON content: ${(err as Error).message}. Content=${rawContent}`,
-      );
+      this.logger.error(`Failed to parse Groq JSON content: ${(err as Error).message}. Content=${rawContent}`);
       throw new InternalServerErrorException('AI response was not valid JSON.');
     }
 
     this.logger.log(
-      `Groq analysis completed for adNo=${
-        (ad as any).attributes?.adNo ?? ad.id ?? 'unknown'
-      } -> ${JSON.stringify(
+      `Groq analysis completed for adNo=${(ad as any).attributes?.adNo ?? ad.id ?? 'unknown'} -> ${JSON.stringify(
         parsed,
         (key, value) => {
           if (typeof value === 'string' && value.length > 500) {
             return `${value.slice(0, 500)}...[truncated]`;
           }
           return value;
-        },
-      )}`,
+        }
+      )}`
     );
 
     return parsed;

@@ -9,4 +9,3 @@ import { AiModule } from '../ai/ai.module';
   providers: [AdService],
 })
 export class AdModule {}
-

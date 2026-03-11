@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { connect } from 'puppeteer-real-browser';
 import { parseSahibindenAdHtml } from '../../utils/ad-html-parser.util';
 import { AiService } from '../ai/ai.service';
@@ -28,6 +28,25 @@ export class AdService {
 
       const html = await page.content();
       const parsed = parseSahibindenAdHtml(html);
+
+      const hasBasicData =
+        parsed?.title &&
+        parsed.priceText &&
+        parsed.attributes &&
+        Object.keys(parsed.attributes).length > 0;
+
+      if (!hasBasicData) {
+        this.logger.error(
+          `Failed to scrape ad data for adNo=${adNo}. Parsed object looks incomplete.`,
+        );
+        throw new BadRequestException({
+          ok: false,
+          errorCode: 'SCRAPE_FAILED',
+          message:
+            'İlan verileri güvenilir şekilde çekilemedi. Lütfen ilanı tarayıcıdan manuel kontrol edin veya daha sonra tekrar deneyin.',
+        });
+      }
+
       const analysis = await this.aiService.analyzeAd(parsed);
       return analysis;
     } finally {
@@ -38,4 +57,3 @@ export class AdService {
     }
   }
 }
-
