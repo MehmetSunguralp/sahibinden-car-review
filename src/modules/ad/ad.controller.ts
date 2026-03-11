@@ -11,7 +11,8 @@ export class AdController {
       throw new BadRequestException('Missing adNo query parameter');
     }
 
-    await this.adService.crawlAd(adNo);
-    return { ok: true, adNo };
+    const analysis = await this.adService.crawlAd(adNo);
+    return analysis;
   }
 }
+

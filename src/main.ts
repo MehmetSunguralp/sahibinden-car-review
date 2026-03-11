@@ -1,5 +1,6 @@
+import 'dotenv/config';
 import 'reflect-metadata';
-import './polyfills/file.polyfill';
+import './utils/file.polyfill';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
