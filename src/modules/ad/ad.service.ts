@@ -30,25 +30,39 @@ export class AdService {
       const parsed = parseSahibindenAdHtml(html);
 
       const hasBasicData =
-        parsed?.title &&
-        parsed.priceText &&
-        parsed.attributes &&
+        !!parsed?.title &&
+        !!parsed.priceText &&
+        !!parsed.attributes &&
         Object.keys(parsed.attributes).length > 0;
 
-      if (!hasBasicData) {
-        this.logger.error(
-          `Failed to scrape ad data for adNo=${adNo}. Parsed object looks incomplete.`,
-        );
-        throw new BadRequestException({
-          ok: false,
-          errorCode: 'SCRAPE_FAILED',
-          message:
-            'İlan verileri güvenilir şekilde çekilemedi. Lütfen ilanı tarayıcıdan manuel kontrol edin veya daha sonra tekrar deneyin.',
-        });
+      if (hasBasicData) {
+        const analysis = await this.aiService.analyzeAd(parsed);
+        const adUrl =
+          parsed.id != null
+            ? `https://www.sahibinden.com/${parsed.id}`
+            : url;
+
+        return {
+          ad: {
+            adNo,
+            id: parsed.id,
+            title: parsed.title,
+            coverImageUrl: parsed.coverImageUrl,
+            url: adUrl,
+          },
+          analysis,
+        };
       }
 
-      const analysis = await this.aiService.analyzeAd(parsed);
-      return analysis;
+      this.logger.error(
+        `Failed to scrape ad data for adNo=${adNo}. Parsed object looks incomplete.`,
+      );
+      throw new BadRequestException({
+        ok: false,
+        errorCode: 'SCRAPE_FAILED',
+        message:
+          'İlan verileri güvenilir şekilde çekilemedi. Lütfen ilanı tarayıcıdan manuel kontrol edin veya daha sonra tekrar deneyin.',
+      });
     } finally {
       await page.close();
       if (browser?.connected) {
