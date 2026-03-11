@@ -17,6 +17,7 @@
     "@nestjs/common": "^11.1.16",
     "@nestjs/core": "^11.1.16",
     "@nestjs/platform-express": "^11.1.16",
+    "cheerio": "^1.0.0",
     "express": "^5.2.1",
     "puppeteer-core": "24.39.0",
     "puppeteer-real-browser": "^1.4.4",

@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { promises as fs } from 'node:fs';
 import { connect } from 'puppeteer-real-browser';
+import { parseSahibindenAdHtml } from '../utils/ad-html-parser.util';
 
 @Injectable()
 export class AdService {
@@ -7,7 +9,7 @@ export class AdService {
 
   async crawlAd(adNo: string): Promise<void> {
     const url = `https://www.sahibinden.com/kelime-ile-arama?query_text=${adNo}`;
-    this.logger.log(`Opening page for adNo=${adNo} -> ${url}`);
+    this.logger.log(`Opening page for ${adNo} -> ${url}`);
 
     const { browser, page } = await connect({
       headless: false,
@@ -22,8 +24,23 @@ export class AdService {
       await new Promise((resolve) => setTimeout(resolve, 15000));
       this.logger.log(`Finished loading page for adNo=${adNo}`);
 
-      // NOTE: For now we only "open" the page.
-      // Later you can inject an LLM client here to analyze the DOM/content.
+      const html = await page.content();
+      const parsed = parseSahibindenAdHtml(html);
+
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/[:.]/g, '-'); // NOSONAR - use regex replace for wide runtime compatibility
+      const outputDir = 'formattedAds';
+      const fileName = `ad-${adNo}-${timestamp}.json`;
+
+      await fs.mkdir(outputDir, { recursive: true });
+      await fs.writeFile(
+        `${outputDir}/${fileName}`,
+        JSON.stringify(parsed, null, 2),
+        'utf8',
+      );
+
+      this.logger.log(`Saved formatted ad JSON to ${outputDir}/${fileName}`);
     } finally {
       await page.close();
       if (browser?.connected) {
