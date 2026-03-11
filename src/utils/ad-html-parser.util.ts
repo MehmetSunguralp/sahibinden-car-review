@@ -26,6 +26,8 @@ export interface ParsedAdDetails {
   locationBreadcrumb: string[];
   coverImageUrl: string | null;
   attributes: AdAttributeMap;
+  carAge: number | null;
+  kmPerYear: number | null;
   descriptionText: string | null;
   featureGroups: AdFeatureGroup[];
   technicalDetails: TechnicalDetailGroup[];
@@ -85,6 +87,62 @@ export function parseSahibindenAdHtml(html: string): ParsedAdDetails {
     }
 
     attributes[label] = value;
+  });
+
+  const normalizedAttributes: AdAttributeMap = {};
+  const normalizeKey = (turkishKey: string): string | null => {
+    switch (turkishKey) {
+      case 'İlan No':
+        return 'adNo';
+      case 'İlan Tarihi':
+        return 'adDate';
+      case 'Marka':
+        return 'brand';
+      case 'Seri':
+        return 'series';
+      case 'Model':
+        return 'model';
+      case 'Yıl':
+        return 'year';
+      case 'Yakıt Tipi':
+        return 'fuelType';
+      case 'Vites':
+        return 'transmission';
+      case 'Araç Durumu':
+        return 'condition';
+      case 'KM':
+      case 'Km':
+        return 'kilometers';
+      case 'Kasa Tipi':
+        return 'bodyType';
+      case 'Motor Gücü':
+        return 'enginePower';
+      case 'Motor Hacmi':
+        return 'engineCapacity';
+      case 'Çekiş':
+        return 'driveType';
+      case 'Renk':
+        return 'color';
+      case 'Garanti':
+        return 'warranty';
+      case 'Ağır Hasar Kayıtlı':
+        return 'severeDamageRecorded';
+      case 'Plaka / Uyruk':
+        return 'plateCountry';
+      case 'Kimden':
+        return 'sellerType';
+      case 'Takas':
+        return 'exchangePossible';
+      default:
+        return null;
+    }
+  };
+
+  Object.entries(attributes).forEach(([trKey, value]) => {
+    const enKey = normalizeKey(trKey);
+    if (enKey) {
+      normalizedAttributes[enKey] = value;
+    }
   });
 
   const descriptionEl = $('#classifiedDescription').first();
@@ -184,13 +242,47 @@ export function parseSahibindenAdHtml(html: string): ParsedAdDetails {
     });
   }
 
+  let carAge: number | null = null;
+  let kmPerYear: number | null = null;
+
+  const yearRaw = normalizedAttributes.year;
+  const kmRaw = normalizedAttributes.kilometers;
+
+  const currentYear = new Date().getFullYear();
+
+  const yearNumeric = yearRaw
+    ? Number.parseInt(
+        yearRaw.replace(/[^\d]/g, ''), // NOSONAR - regex replace for compatibility
+        10,
+      )
+    : Number.NaN; // NOSONAR - explicit NaN usage for clarity
+  const kmNumeric = kmRaw
+    ? Number.parseInt(
+        kmRaw.replace(/[^\d]/g, ''), // NOSONAR - regex replace for compatibility
+        10,
+      )
+    : Number.NaN; // NOSONAR - explicit NaN usage for clarity
+
+  if (!Number.isNaN(yearNumeric) && yearNumeric > 1900 && yearNumeric <= currentYear) {
+    const age = currentYear - yearNumeric;
+    if (age > 0) {
+      carAge = age;
+
+      if (!Number.isNaN(kmNumeric) && kmNumeric >= 0) {
+        kmPerYear = Math.round(kmNumeric / age);
+      }
+    }
+  }
+
   return {
     id: idAttr,
     title,
     priceText,
     locationBreadcrumb,
     coverImageUrl,
-    attributes,
+    attributes: normalizedAttributes,
+    carAge,
+    kmPerYear,
     descriptionText,
     featureGroups,
     technicalDetails,
