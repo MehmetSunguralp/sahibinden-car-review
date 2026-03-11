@@ -26,7 +26,7 @@ export class AdService {
       // Later you can inject an LLM client here to analyze the DOM/content.
     } finally {
       await page.close();
-      if (browser && browser.isConnected()) {
+      if (browser?.connected) {
         await browser.close();
       }
     }
